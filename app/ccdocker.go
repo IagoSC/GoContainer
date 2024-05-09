@@ -6,15 +6,20 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 func main() {
+	fmt.Println(os.Args)
 
 	// Parse args
-	if len(os.Args) < 3 || os.Args[1] != "run" {
+	if len(os.Args) < 4 || os.Args[1] != "run" {
+		// Doesn't work with go run (?)
 		log.Fatalf("\nInvalid command: %s\n\nUse: \t ccdocker run \"<container>\" \"<command>\"\n\n", strings.Join(os.Args, " "))
 	}
 
@@ -71,14 +76,43 @@ func copyFile(source, target string) error {
 	return nil
 }
 
+func createContainerFileSystem(containerName, command string) string {
+	binPath, err := findBinary(command)
+	if err != nil {
+		fmt.Printf("Error finding binary: %s\n", err)
+	}
+
+	containerDir, err := os.MkdirTemp("", containerName+"_*")
+	if err != nil {
+		fmt.Printf("Error creating temp directory for container: %s\n", err)
+		os.Exit(1)
+	}
+	containerBinPath := path.Join(containerDir, binPath)
+	if err := copyFile(binPath, containerBinPath); err != nil {
+		fmt.Printf("Error copying file: %s\n", err)
+		os.Exit(1)
+	}
+	if err := copyFile("/dev/null", path.Join(containerDir, "/dev/null")); err != nil {
+		fmt.Printf("Error copying file: %s\n", err)
+		os.Exit(1)
+	}
+
+	if err := syscall.Chroot(containerDir); err != nil {
+		fmt.Printf("Couldn't run chroot syscall: %s\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Container root created")
+	return containerBinPath
+}
+
 func runCommand(containerName string, command string) {
 	fmt.Println("Running command: ", command)
 
-	// TODO Make this using "os" package
-	binPath, err := findBinary(command)
-	if err != nil {
-		log.Fatalf("Error finding binary: %s", err)
-	}
+	containerBinPath := createContainerFileSystem(containerName, command)
+	fmt.Println(containerBinPath)
+	cmd := exec.Command(containerBinPath)
+
 	// NOT CALLED WHEN CLOSED BY SIGNAL
 	// defer os.RemoveAll(containerDir)
 	// A try to fix
