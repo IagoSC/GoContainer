@@ -79,14 +79,17 @@ func runCommand(containerName string, command string) {
 	if err != nil {
 		log.Fatalf("Error finding binary: %s", err)
 	}
-	containerDir := "/tmp/" + containerName + "/"
-	if err := copyFile(binPath, containerDir+filepath.Base(binPath)); err != nil {
-		log.Fatalf("Error copying file: %s", err)
-	}
-	// NOT CALLED WHEN SIGTERM IS SENT
-	defer os.RemoveAll(containerDir)
-
-	cmd := exec.Command("/bin/sh", "-c", "hostname "+containerName+";"+command)
+	// NOT CALLED WHEN CLOSED BY SIGNAL
+	// defer os.RemoveAll(containerDir)
+	// A try to fix
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigs
+		fmt.Println()
+		fmt.Println(sig)
+		// os.RemoveAll(containerDir)
+	}()
 
 	// Set process in new UTS namespace so hostname can be changed without impacting outside environment
 	// Set process in new mount namespace so it can have its own filesystem,
@@ -94,19 +97,19 @@ func runCommand(containerName string, command string) {
 	// 	Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWNS,
 	// }
 
+	fmt.Println("Run Command")
+
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 
 	if err := cmd.Start(); err != nil {
-		log.Fatalf("Error running command: %s", err)
+		fmt.Printf("Error running command: %s\n", err)
 	}
 	fmt.Println("Child PID: ", cmd.Process.Pid)
-	fmt.Println()
 
 	//Set signal handlers to forward signals to child process
-
 	if err := cmd.Wait(); err != nil {
-		log.Fatalf("Error waiting for command: %s", err)
+		fmt.Printf("Error waiting for command: %s", err)
 	}
 }
 
