@@ -1,1 +1,4 @@
 ccdocker
+tmp/*
+examples/*
+launch.json
