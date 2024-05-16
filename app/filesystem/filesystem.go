@@ -14,13 +14,14 @@ import (
 )
 
 func Clean(containerDir string) {
-	fmt.Print("CLEANING")
-	os.RemoveAll(containerDir)
+	fmt.Println("CLEANING")
+	// os.RemoveAll(containerDir)
 }
 
 func FindBinary(command string) (string, error) {
 	pathList := os.Getenv("PATH")
 	for _, directory := range filepath.SplitList(pathList) {
+		//  it works if it doesn't find the binary in $PATH
 		path := filepath.Join(directory, command)
 		fileInfo, err := os.Stat(path)
 		if err == nil {
@@ -30,6 +31,17 @@ func FindBinary(command string) (string, error) {
 				return path, nil
 			}
 		}
+
+		path = filepath.Join(directory, filepath.Base(command))
+		fileInfo, err = os.Stat(path)
+		if err == nil {
+			mode := fileInfo.Mode()
+			if mode.IsRegular() && mode&0111 != 0 {
+				fmt.Println("Path: ", path)
+				return path, nil
+			}
+		}
+
 	}
 	return "", fmt.Errorf("binary not found: %s", command)
 }
@@ -75,6 +87,7 @@ func CreateContainerFileSystem(containerName, command string) (string, string, e
 	}
 
 	containerDir := path.Join(must(os.Getwd()), "tmp", containerName)
+	fmt.Println("Create container dir at ", containerDir)
 	err = os.MkdirAll(containerDir, 0755)
 	if err != nil {
 		fmt.Printf("Error creating temp directory for container: %s\n", err)
