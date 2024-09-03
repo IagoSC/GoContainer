@@ -13,6 +13,9 @@ func main() {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 
+	currentDir, _ := os.Getwd()
+	fmt.Println("Current dir: ", currentDir)
+
 	if err := cmd.Start(); err != nil {
 		fmt.Println("ERROR starting: ", err)
 		os.Exit(1)

@@ -1,20 +1,26 @@
 build_test(){
     echo "Building test"
     go build tests/test.go
-    mv test tests/test 
+    # mv test tests/test 
 }
 
 run_test(){
     echo "Running ./tests/test"
     build_test
     go build app/ccdocker.go
-    ./ccdocker run container ./tests/test
+    ./ccdocker run container ./tests/testando
 }
 
 run_ls(){
     echo "Running ls"
     go build app/ccdocker.go
-    ./ccdocker run container ./tests/ls
+    ./ccdocker run container ./tests/ls_new
+}
+
+run_try(){
+    echo "Running try"
+    go build app/ccdocker.go
+    ./ccdocker run container ./tests/try.sh
 }
 
 
