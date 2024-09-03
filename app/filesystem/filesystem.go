@@ -19,6 +19,10 @@ func Clean(containerDir string) {
 }
 
 func FindBinary(command string) (string, error) {
+	if filepath.Base(command) != command {
+		return command, nil
+	}
+
 	pathList := os.Getenv("PATH")
 	for _, directory := range filepath.SplitList(pathList) {
 		//  it works if it doesn't find the binary in $PATH
@@ -31,17 +35,6 @@ func FindBinary(command string) (string, error) {
 				return path, nil
 			}
 		}
-
-		path = filepath.Join(directory, filepath.Base(command))
-		fileInfo, err = os.Stat(path)
-		if err == nil {
-			mode := fileInfo.Mode()
-			if mode.IsRegular() && mode&0111 != 0 {
-				fmt.Println("Path: ", path)
-				return path, nil
-			}
-		}
-
 	}
 	return "", fmt.Errorf("binary not found: %s", command)
 }
